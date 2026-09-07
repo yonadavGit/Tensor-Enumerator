@@ -1,30 +1,67 @@
 # Tensor Enumerator
 
-A minimal executable model of a tensor as a generated family of framed
+A minimal executable model of a tensor as a generated family of basis-indexed
 representations.
 
+## Definition
+
+Let `P` be the tensor-enumerator program.
+
+Let `B0 = (e1, ..., ed)` be a chosen ordered basis, and let `A0` be a component
+array written with respect to `B0`. The pair `(B0, A0)` is the initial basis
+representation.
+
+The tensor determined by this initial basis representation is defined by
+running the actual program `P` indefinitely on the concrete input:
+
 ```text
-seed components in F0
-  + tensor type (r, s)
-  + enumerated frame address J
-  -> (F_J, transformed components)
+(B0, A0, (r,s), d)
 ```
 
-`F0` is just the reference frame used by the program. Each matrix `J` names a
-new frame `F_J` relative to `F0`, so the enumerator never identifies bare
-component arrays. It prints framed representations.
+During that run, `P` emits basis-indexed representations. The tensor is the
+complete set of representations that eventually appear in this output stream:
+
+```text
+T = {
+  (B_J, A_J) : P eventually emits (B_J, A_J)
+               when run on (B0, A0, (r,s), d)
+}
+```
+
+In short:
+
+```text
+A tensor is the complete output stream, viewed as a set, produced by running P
+indefinitely on an initial component representation in a chosen ordered basis.
+```
+
+```text
+component representation in an initial ordered basis B0
+  + tensor type (r, s)
+  + enumerated component map J
+  -> (B_J, transformed components)
+```
+
+`B0` is a chosen ordered basis. Each matrix `J` is the component map used by the
+transformation law. The actual vectors of the generated basis `B_J`, written in
+the original basis `B0`, are the columns of `J^-1`. The enumerator never
+identifies bare component arrays; it prints basis-indexed representations.
 
 ## Run
 
 ```bash
-python examples/run.py
-python examples/run.py --limit 20
-python examples/run.py --steps 0,12
-python examples/run.py --rational --steps 613
+python -m tensor_enumerator
+python -m tensor_enumerator --limit 20
+python -m tensor_enumerator --steps 0,12
+python -m tensor_enumerator --rational --steps 613
+python -m tensor_enumerator --symbol V --steps 0
+python -m tensor_enumerator --symbol g --type 0,2 --components '[[1,2],[3,4]]' --limit 1000
 ```
 
-The output shows each step, the generated frame, `J`, `J^-1`, the tensor type,
-and the transformed components with matrices printed as matrices.
+The output starts with the core mathematical information, for example
+`T^i in B_0 =`, then shows the generated basis, the component map `J`, the basis
+vectors `J^-1`, and the tensor type. Matrices and component vectors are printed
+as matrices.
 
 ## Shape
 
@@ -67,18 +104,26 @@ new_T[i,j,n] += old_T[k,l,m] * J[i,k] * J[j,l] * J^-1[m,n]
 ## API
 
 ```python
-from tensor_enumerator import Seed, enumerate_tensor, glz, pretty_seed, pretty_step, sparse, take
+from tensor_enumerator import (
+    BasisRepresentation,
+    enumerate_tensor,
+    glz,
+    pretty_basis_representation,
+    pretty_step,
+    sparse,
+    take,
+)
 
-seed = Seed(
+reference = BasisRepresentation(
     components=sparse([1, 0], rank=1),
     tensor_type=(1, 0),
     dimension=2,
 )
 
-print(pretty_seed(seed))
+print(pretty_basis_representation(reference))
 
-for rep in take(enumerate_tensor(seed, glz(2)), 5):
-    print(pretty_step(rep, seed.dimension))
+for rep in take(enumerate_tensor(reference, glz(2)), 5):
+    print(pretty_step(rep, reference.dimension))
 ```
 
 Use `glz(n)` for a readable integer-matrix enumeration. Use `glq(n)` for the
@@ -89,8 +134,8 @@ To run only selected global steps:
 ```python
 from tensor_enumerator import enumerate_steps
 
-for rep in enumerate_steps(seed, glz(2), [12]):
-    print(pretty_step(rep, seed.dimension))
+for rep in enumerate_steps(reference, glz(2), [12]):
+    print(pretty_step(rep, reference.dimension))
 ```
 
 ## Test

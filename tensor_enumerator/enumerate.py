@@ -4,24 +4,34 @@ from fractions import Fraction
 from itertools import count, product
 from typing import Iterable, Iterator
 
-from .helpers import det, matrix
-from .model import Matrix, Representation, Seed
+from .helpers import det, inverse, matrix
+from .model import BasisRepresentation, Matrix, Representation
 from .transform import transform
 
 
-def enumerate_tensor(seed: Seed, matrices: Iterable[Matrix]) -> Iterator[Representation]:
+def enumerate_tensor(
+    reference: BasisRepresentation,
+    matrices: Iterable[Matrix],
+) -> Iterator[Representation]:
     for step, j in enumerate(matrices):
         yield Representation(
             step=step,
-            frame=f"F_{step}",
+            basis=f"B_{step}",
+            symbol=reference.symbol,
             j=j,
-            components=transform(seed.components, seed.tensor_type, j, seed.dimension),
-            tensor_type=seed.tensor_type,
+            basis_vectors=inverse(j),
+            components=transform(
+                reference.components,
+                reference.tensor_type,
+                j,
+                reference.dimension,
+            ),
+            tensor_type=reference.tensor_type,
         )
 
 
 def enumerate_steps(
-    seed: Seed,
+    reference: BasisRepresentation,
     matrices: Iterable[Matrix],
     steps: Iterable[int],
 ) -> Iterator[Representation]:
@@ -31,7 +41,7 @@ def enumerate_steps(
     if min(wanted) < 0:
         raise ValueError("steps must be non-negative")
 
-    for rep in enumerate_tensor(seed, matrices):
+    for rep in enumerate_tensor(reference, matrices):
         if rep.step in wanted:
             yield rep
             wanted.remove(rep.step)

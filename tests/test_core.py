@@ -3,7 +3,7 @@ from itertools import islice
 import unittest
 
 from tensor_enumerator import (
-    Seed,
+    BasisRepresentation,
     dense,
     enumerate_steps,
     enumerate_tensor,
@@ -13,9 +13,11 @@ from tensor_enumerator import (
     inverse,
     matrix,
     pretty_matrix,
+    pretty_step,
     sparse,
     transform,
 )
+from tensor_enumerator.cli import infer_dimension, parse_tensor_type
 
 
 class TensorEnumeratorTests(unittest.TestCase):
@@ -46,19 +48,20 @@ class TensorEnumeratorTests(unittest.TestCase):
             ],
         )
 
-    def test_enumerator_keeps_step_and_frame(self):
-        seed = Seed(sparse([1, 0], rank=1), (1, 0), 2)
-        first, second = list(enumerate_steps(seed, glz(2), [0, 1]))
+    def test_enumerator_keeps_step_and_basis(self):
+        reference = BasisRepresentation(sparse([1, 0], rank=1), (1, 0), 2)
+        first, second = list(enumerate_steps(reference, glz(2), [0, 1]))
 
         self.assertEqual(first.step, 0)
-        self.assertEqual(first.frame, "F_0")
+        self.assertEqual(first.basis, "B_0")
+        self.assertEqual(first.basis_vectors, matrix([[1, 0], [0, 1]]))
         self.assertEqual(second.step, 1)
-        self.assertEqual(second.frame, "F_1")
+        self.assertEqual(second.basis, "B_1")
 
     def test_selected_step_matches_full_enumeration(self):
-        seed = Seed(sparse([1, 0], rank=1), (1, 0), 2)
-        selected = next(enumerate_steps(seed, glz(2), [3]))
-        full = list(islice(enumerate_tensor(seed, glz(2)), 4))
+        reference = BasisRepresentation(sparse([1, 0], rank=1), (1, 0), 2)
+        selected = next(enumerate_steps(reference, glz(2), [3]))
+        full = list(islice(enumerate_tensor(reference, glz(2)), 4))
 
         self.assertEqual(selected.components, full[3].components)
 
@@ -77,6 +80,17 @@ class TensorEnumeratorTests(unittest.TestCase):
             pretty_matrix(matrix([[1, 0], [0, Fraction(1, 2)]])),
             "[ 1    0 ]\n[ 0  1/2 ]",
         )
+
+    def test_pretty_step_starts_with_tensor_representation(self):
+        reference = BasisRepresentation(sparse([1, 0], rank=1), (1, 0), 2, symbol="V")
+        rep = next(enumerate_steps(reference, glz(2), [0]))
+
+        self.assertIn("V^i in B_0 =", pretty_step(rep, 2))
+        self.assertIn("basis vectors of B_0, written in B0 = J^-1 =", pretty_step(rep, 2))
+
+    def test_cli_parses_tensor_type_and_dimension(self):
+        self.assertEqual(parse_tensor_type("0,2"), (0, 2))
+        self.assertEqual(infer_dimension([[1, 2], [3, 4]]), 2)
 
 
 if __name__ == "__main__":

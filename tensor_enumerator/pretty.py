@@ -2,22 +2,22 @@ from __future__ import annotations
 
 from fractions import Fraction
 
-from .helpers import dense, inverse
-from .model import Matrix, Representation, Seed
+from .helpers import dense
+from .model import BasisRepresentation, Matrix, Representation
 
 
-def pretty_seed(seed: Seed) -> str:
-    rank = sum(seed.tensor_type)
+def pretty_basis_representation(reference: BasisRepresentation) -> str:
+    rank = sum(reference.tensor_type)
     return "\n".join(
         [
-            "SEED",
-            "frame: F0",
-            f"dimension: {seed.dimension}",
-            f"type: {seed.tensor_type}  rule: {rule(seed.tensor_type)}",
-            "components in F0 =",
-            pretty_array(dense(seed.components, seed.dimension, rank)),
+            "REFERENCE REPRESENTATION",
+            f"{tensor_name(reference.symbol, reference.tensor_type)} in B0 =",
+            pretty_array(dense(reference.components, reference.dimension, rank)),
+            f"dimension: {reference.dimension}",
+            f"type: {reference.tensor_type}  rule: {rule(reference.tensor_type)}",
         ]
     )
+
 
 
 def pretty_step(rep: Representation, dimension: int) -> str:
@@ -25,14 +25,14 @@ def pretty_step(rep: Representation, dimension: int) -> str:
     return "\n".join(
         [
             f"STEP {rep.step}",
-            f"frame: {rep.frame}  (F0 --J--> {rep.frame})",
-            f"type: {rep.tensor_type}  rule: {rule(rep.tensor_type)}",
-            "J =",
-            pretty_matrix(rep.j),
-            "J^-1 =",
-            pretty_matrix(inverse(rep.j)),
-            f"components in {rep.frame} =",
+            f"{tensor_name(rep.symbol, rep.tensor_type)} in {rep.basis} =",
             pretty_array(dense(rep.components, dimension, rank)),
+            f"basis: {rep.basis}",
+            f"type: {rep.tensor_type}  rule: {rule(rep.tensor_type)}",
+            "component map J =",
+            pretty_matrix(rep.j),
+            f"basis vectors of {rep.basis}, written in B0 = J^-1 =",
+            pretty_matrix(rep.basis_vectors),
         ]
     )
 
@@ -65,6 +65,30 @@ def rule(tensor_type: tuple[int, int]) -> str:
     if s:
         parts.append(f"{s} lower -> J^-1")
     return ", ".join(parts) if parts else "scalar"
+
+
+def tensor_name(symbol: str, tensor_type: tuple[int, int]) -> str:
+    r, s = tensor_type
+    upper = ",".join(upper_index_name(i) for i in range(r))
+    lower = ",".join(lower_index_name(i) for i in range(s))
+
+    if upper and lower:
+        return f"{symbol}^{upper}_{lower}"
+    if upper:
+        return f"{symbol}^{upper}"
+    if lower:
+        return f"{symbol}_{lower}"
+    return symbol
+
+
+def upper_index_name(position: int) -> str:
+    names = ["i", "j", "k", "l"]
+    return names[position] if position < len(names) else f"i{position + 1}"
+
+
+def lower_index_name(position: int) -> str:
+    names = ["m", "n", "p", "q"]
+    return names[position] if position < len(names) else f"m{position + 1}"
 
 
 def fmt(value) -> str:

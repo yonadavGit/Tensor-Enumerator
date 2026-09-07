@@ -15,7 +15,7 @@ def transform(
     J_fwd: Matrix,
     d: int,
 ) -> Components:
-    """Transform tensor components from F0 to F_J.
+    """Transform tensor components from B0 to B_J.
 
     For a tensor of type (r, s), write a new index as
 

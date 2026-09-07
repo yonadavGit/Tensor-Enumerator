@@ -9,16 +9,19 @@ Components = dict[Index, Fraction]
 
 
 @dataclass(frozen=True)
-class Seed:
+class BasisRepresentation:
     components: Components
     tensor_type: tuple[int, int]
     dimension: int
+    symbol: str = "T"
 
 
 @dataclass(frozen=True)
 class Representation:
     step: int
-    frame: str
+    basis: str
+    symbol: str
     j: Matrix
+    basis_vectors: Matrix
     components: Components
     tensor_type: tuple[int, int]
