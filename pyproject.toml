@@ -3,10 +3,7 @@ name = "tensor-enumerator"
 version = "0.1.0"
 description = "A small executable model of tensors as frame-indexed representations."
 requires-python = ">=3.11"
-dependencies = []
-
-[project.optional-dependencies]
-symbolic = ["sympy>=1.13"]
+dependencies = ["sympy>=1.13"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

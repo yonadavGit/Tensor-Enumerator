@@ -1,134 +1,100 @@
 # Tensor Enumerator
 
-Understanding tensors by making their transformation law executable.
-
-This is a small proof of concept for a computational definition of tensors:
+A minimal executable model of a tensor as a generated family of framed
+representations.
 
 ```text
 seed components in F0
-        +
-tensor type (r, s)
-        +
-generated frames F_J, each named by a matrix J from F0
-        ↓
-frame-indexed component representations of the same tensor
+  + tensor type (r, s)
+  + enumerated frame address J
+  -> (F_J, transformed components)
 ```
 
-The reference frame `F0` is not mathematically privileged. It is a storage
-convention. Every generated frame is addressed by its fixed transformation from
-`F0`, so the enumerator yields framed representations, not raw arrays.
-
-```text
-Tensor(A0, type) = {
-  (F_J, transform(A0, J, type)) : J in admissible transformations from F0
-}
-```
-
-That distinction matters. For a vector, some matrix can send almost any nonzero
-tuple to almost any other nonzero tuple. The project avoids that collapse by
-never identifying bare tuples. It identifies framed tuples:
-
-```text
-(F0, [1, 0]) and (F_J, [0, 1])
-```
-
-may represent the same vector, while
-
-```text
-(F0, [1, 0]) and (F0, [0, 1])
-```
-
-do not.
-
-## Core Convention
-
-`J` is the component-change matrix from the reference frame `F0` to the
-generated frame `F_J`.
-
-- contravariant / upper indices use `J`
-- covariant / lower indices use `J^-1`
-
-So a type `(r, s)` tensor transforms by applying `J` to its first `r` indices and
-`J^-1` to its final `s` indices.
-
-## Enumerating Jacobians
-
-The mathematically honest enumerator is `enumerate_glq(n)`.
-
-It enumerates rational matrices by height:
-
-```text
-height(a / b) = max(abs(a), b)
-```
-
-then forms all `n x n` rational matrices from those entries and yields the ones
-with nonzero determinant. In short:
-
-```text
-enumerate Q^(n*n)
-keep J iff det(J) != 0
-yield J
-```
-
-For cleaner short demos, `enumerate_glnz(n)` enumerates the integer subset
-`GL(n, Z)`.
-
-## Quick Example
-
-```python
-from itertools import islice
-
-from tensor_enumerator import TensorEnumerator, TensorSeed, as_dense, as_sparse, enumerate_glnz
-
-seed = TensorSeed(
-    components=as_sparse([1, 0], rank=1),
-    tensor_type=(1, 0),
-    dimension=2,
-)
-
-for representation in islice(TensorEnumerator(seed, enumerate_glnz(2)), 3):
-    print(representation.frame.name)
-    print(representation.frame.from_reference)
-    print(as_dense(representation.components, 2, rank=1))
-```
+`F0` is just the reference frame used by the program. Each matrix `J` names a
+new frame `F_J` relative to `F0`, so the enumerator never identifies bare
+component arrays. It prints framed representations.
 
 ## Run
 
 ```bash
-python -m unittest discover -s tests
-python examples/basic_enumerator.py
-python examples/covector_demo.py
-python examples/polar_exact_step.py
+python examples/run.py
+python examples/run.py --limit 20
+python examples/run.py --steps 0,12
+python examples/run.py --rational --steps 613
 ```
 
-The basic example prints the seed, every generated frame address `J`, its
-inverse, the index rule being applied, and the resulting framed representation.
+The output shows each step, the generated frame, `J`, `J^-1`, the tensor type,
+and the transformed components with matrices printed as matrices.
 
-`examples/polar_exact_step.py` computes the symbolic polar Jacobian
-`d(x,y)/d(r,theta)`, evaluates it at a rational point, and searches
-`enumerate_glq(2)` until the exact rational matrix appears.
+## Shape
 
-Once a step is known, you can run only that step:
+The project is split so the defining idea is easy to inspect:
+
+```text
+tensor_enumerator/transform.py   core tensor transformation loop
+tensor_enumerator/enumerate.py   GL(n,Q) / GL(n,Z) enumerators
+tensor_enumerator/pretty.py      readable step printing
+tensor_enumerator/helpers.py     sparse/dense conversion + SymPy matrix ops
+```
+
+Determinants and inverses are delegated to SymPy. The matrix enumeration itself
+stays explicit because it is part of the model being demonstrated.
+
+## Core Loop
+
+The transformer in `transform.py` is the rank-generic version of the handwritten
+tensor formula:
 
 ```python
-from tensor_enumerator import TensorSeed, as_sparse, enumerate_glq, representations_at_steps
+for new_index in all_indices:
+    for old_index in all_indices:
+        new_T[new_index] += old_T[old_index] * coefficient
+```
 
-seed = TensorSeed(
-    components=as_sparse([3, 4], rank=1),
+The coefficient has one matrix factor per index slot:
+
+```text
+upper index: J[new_i][old_i]
+lower index: J^-1[old_i][new_i]
+```
+
+So type `(2, 1)` behaves like the explicit loop:
+
+```text
+new_T[i,j,n] += old_T[k,l,m] * J[i,k] * J[j,l] * J^-1[m,n]
+```
+
+## API
+
+```python
+from tensor_enumerator import Seed, enumerate_tensor, glz, pretty_seed, pretty_step, sparse, take
+
+seed = Seed(
+    components=sparse([1, 0], rank=1),
     tensor_type=(1, 0),
     dimension=2,
 )
 
-for representation in representations_at_steps(seed, enumerate_glq(2), [613]):
-    print(representation.frame.name)
-    print(representation.frame.from_reference)
-    print(representation.components)
+print(pretty_seed(seed))
+
+for rep in take(enumerate_tensor(seed, glz(2)), 5):
+    print(pretty_step(rep, seed.dimension))
 ```
 
-The core has no dependencies. For symbolic coordinate-map demos:
+Use `glz(n)` for a readable integer-matrix enumeration. Use `glq(n)` for the
+full rational enumeration of `GL(n, Q)`.
+
+To run only selected global steps:
+
+```python
+from tensor_enumerator import enumerate_steps
+
+for rep in enumerate_steps(seed, glz(2), [12]):
+    print(pretty_step(rep, seed.dimension))
+```
+
+## Test
 
 ```bash
-pip install -e ".[symbolic]"
-python examples/cartesian_to_polar_jacobian.py
-python examples/polar_exact_step.py
+python -m unittest discover -s tests
 ```

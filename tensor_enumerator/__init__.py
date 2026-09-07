@@ -1,44 +1,26 @@
-"""A small executable model of tensors as frame-indexed representations."""
+"""Tensor Enumerator: tensors as generated framed representations."""
 
-from .core import (
-    Frame,
-    Representation,
-    TensorEnumerator,
-    TensorSeed,
-    as_dense,
-    as_sparse,
-    enumerate_glq,
-    enumerate_glnz,
-    find_matrix_step,
-    inverse,
-    matrix,
-    rational_height,
-    rationals_with_height_at_most,
-    representation_at_matrix,
-    representations_at_steps,
-    transition_between,
-    transform_components,
-)
-from .display import describe_representation, describe_seed
+from .enumerate import enumerate_steps, enumerate_tensor, find_step, glq, glz
+from .helpers import dense, inverse, matrix, sparse, take
+from .model import Representation, Seed
+from .pretty import pretty_matrix, pretty_seed, pretty_step
+from .transform import transform
 
 __all__ = [
-    "Frame",
     "Representation",
-    "TensorEnumerator",
-    "TensorSeed",
-    "as_dense",
-    "as_sparse",
-    "enumerate_glq",
-    "enumerate_glnz",
-    "find_matrix_step",
+    "Seed",
+    "dense",
+    "enumerate_steps",
+    "enumerate_tensor",
+    "find_step",
+    "glq",
+    "glz",
     "inverse",
     "matrix",
-    "rational_height",
-    "rationals_with_height_at_most",
-    "representation_at_matrix",
-    "representations_at_steps",
-    "transition_between",
-    "transform_components",
-    "describe_representation",
-    "describe_seed",
+    "pretty_matrix",
+    "pretty_seed",
+    "pretty_step",
+    "sparse",
+    "take",
+    "transform",
 ]
