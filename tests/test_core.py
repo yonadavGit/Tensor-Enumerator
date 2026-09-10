@@ -9,15 +9,16 @@ from tensor_enumerator import (
     enumerate_tensor,
     find_step,
     glq,
-    glz,
+    infer_dimension,
     inverse,
     matrix,
+    parse_tensor_type,
     pretty_matrix,
     pretty_step,
+    pretty_step_verbose,
     sparse,
     transform,
 )
-from tensor_enumerator.cli import infer_dimension, parse_tensor_type
 
 
 class TensorEnumeratorTests(unittest.TestCase):
@@ -50,7 +51,7 @@ class TensorEnumeratorTests(unittest.TestCase):
 
     def test_enumerator_keeps_step_and_basis(self):
         reference = BasisRepresentation(sparse([1, 0], rank=1), (1, 0), 2)
-        first, second = list(enumerate_steps(reference, glz(2), [0, 1]))
+        first, second = list(enumerate_steps(reference, glq(2), [0, 1]))
 
         self.assertEqual(first.step, 0)
         self.assertEqual(first.basis, "B_0")
@@ -60,8 +61,8 @@ class TensorEnumeratorTests(unittest.TestCase):
 
     def test_selected_step_matches_full_enumeration(self):
         reference = BasisRepresentation(sparse([1, 0], rank=1), (1, 0), 2)
-        selected = next(enumerate_steps(reference, glz(2), [3]))
-        full = list(islice(enumerate_tensor(reference, glz(2)), 4))
+        selected = next(enumerate_steps(reference, glq(2), [3]))
+        full = list(islice(enumerate_tensor(reference, glq(2)), 4))
 
         self.assertEqual(selected.components, full[3].components)
 
@@ -83,10 +84,12 @@ class TensorEnumeratorTests(unittest.TestCase):
 
     def test_pretty_step_starts_with_tensor_representation(self):
         reference = BasisRepresentation(sparse([1, 0], rank=1), (1, 0), 2, symbol="V")
-        rep = next(enumerate_steps(reference, glz(2), [0]))
+        rep = next(enumerate_steps(reference, glq(2), [0]))
 
-        self.assertIn("V^i in B_0 =", pretty_step(rep, 2))
-        self.assertIn("basis vectors of B_0, written in B0 = J^-1 =", pretty_step(rep, 2))
+        self.assertIn("basis =", pretty_step(rep, 2))
+        self.assertIn("V^i =", pretty_step(rep, 2))
+        self.assertNotIn("component map J", pretty_step(rep, 2))
+        self.assertIn("basis vectors of B_0, written in B0 = J^-1 =", pretty_step_verbose(rep, 2))
 
     def test_cli_parses_tensor_type_and_dimension(self):
         self.assertEqual(parse_tensor_type("0,2"), (0, 2))

@@ -1,3 +1,5 @@
+"""The core tensor transformation loop."""
+
 from __future__ import annotations
 
 from collections import defaultdict
@@ -5,8 +7,11 @@ from fractions import Fraction
 from itertools import product
 from math import prod
 
-from .helpers import inverse
-from .model import Components, Matrix
+from sympy import Matrix as SympyMatrix
+
+Index = tuple[int, ...]
+Matrix = tuple[tuple[Fraction, ...], ...]
+Components = dict[Index, Fraction]
 
 
 def transform(
@@ -16,22 +21,6 @@ def transform(
     d: int,
 ) -> Components:
     """Transform tensor components from B0 to B_J.
-
-    For a tensor of type (r, s), write a new index as
-
-        new = (new upper indices..., new lower indices...)
-
-    and an old index as
-
-        old = (old upper indices..., old lower indices...)
-
-    Then:
-
-        new_T[new] =
-            sum over old:
-                old_T[old]
-                * J      for each upper index slot
-                * J^-1   for each lower index slot
 
     Example for type (2, 1):
 
@@ -60,12 +49,15 @@ def transform(
                         J_bwd[m][n] for n, m in zip(NEW_lower, OLD_lower)
                     )
 
-    return without_zeros(new_T)
+    return {index: value for index, value in new_T.items() if value}
+
+
+def inverse(m: Matrix) -> Matrix:
+    return tuple(
+        tuple(Fraction(value) for value in row)
+        for row in SympyMatrix(m).inv().tolist()
+    )
 
 
 def multi_indices(d: int, rank: int) -> list[tuple[int, ...]]:
     return list(product(range(d), repeat=rank))
-
-
-def without_zeros(components: Components) -> Components:
-    return {index: value for index, value in components.items() if value}
